@@ -1,19 +1,18 @@
-import { Button } from "@/components/ui/button"
+import { HeroSection } from "@/components/landing/hero-section"
 
-export default function Page() {
+import { CTASection } from "@/components/landing/cta-section"
+import { FeaturesSection } from "@/components/landing/featured-section"
+import { HowItWorksSection } from "@/components/landing/how-it-works"
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
+    <div className="min-h-screen">
+      <main>
+        <HeroSection />
+        <FeaturesSection />
+        <HowItWorksSection />
+        <CTASection />
+      </main>
     </div>
   )
 }
