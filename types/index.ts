@@ -76,3 +76,18 @@ export interface UserWithRole {
   votingPower: string
   isAdmin: boolean
 }
+
+export interface IDonation {
+  campaignAddress: `0x${string}`
+  donor: `0x${string}`
+  amount: string
+  txHash: string
+  blockNumber: string
+  status: string
+}
+
+export interface ApiResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
