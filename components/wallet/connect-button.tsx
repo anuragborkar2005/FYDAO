@@ -36,7 +36,7 @@ export default function ConnectButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="w-fit px-6 py-1.5">
+        <Button className="w-fit px-2 py-1.5">
           <HugeiconsIcon icon={Profile} />
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </Button>
