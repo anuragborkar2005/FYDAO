@@ -3,16 +3,20 @@ import { HeroSection } from "@/components/landing/hero-section"
 import { CTASection } from "@/components/landing/cta-section"
 import { FeaturesSection } from "@/components/landing/featured-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works"
+import { Navigation } from "@/components/navigation"
+import { Footer } from "@/components/footer"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen">
+      <Navigation />
       <main>
         <HeroSection />
         <FeaturesSection />
         <HowItWorksSection />
         <CTASection />
       </main>
+      <Footer />
     </div>
   )
 }
