@@ -12,11 +12,13 @@ import { useDisconnect } from "wagmi"
 import { useEffect } from "react"
 import { Profile, WalletIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useRouter } from "next/navigation"
 
 export default function ConnectButton() {
   const { open } = useAppKit()
   const { isConnected, address } = useAppKitAccount()
   const { disconnect } = useDisconnect()
+  const router = useRouter()
 
   useEffect(() => {
     if (isConnected && address) {
@@ -44,7 +46,7 @@ export default function ConnectButton() {
       <DropdownMenuContent>
         <DropdownMenuItem
           onClick={() => {
-            console.log("Clicked")
+            router.push("/profile")
           }}
         >
           Profile

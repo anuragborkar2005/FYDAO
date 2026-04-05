@@ -13,18 +13,24 @@ import ConnectButton from "./wallet/connect-button"
 const allNavItems = [
   { href: "/campaigns", label: "Explore", requiresAuth: false },
   {
-    href: "/create",
+    href: "/dashboard",
+    label: "Dashboard",
+    requireAuth: true,
+    roles: ["admin", "dao_member"],
+  },
+  {
+    href: "/campaigns/create",
     label: "Start Campaign",
     requiresAuth: true,
     roles: ["creator", "admin"],
   },
   {
-    href: "/dao",
-    label: "DAO Voting",
+    href: "/governance",
+
+    label: "Governance",
     requiresAuth: true,
     roles: ["dao_member", "admin"],
   },
-  { href: "/transparency", label: "Transparency", requiresAuth: true },
 ]
 
 export function Navigation() {
@@ -54,7 +60,7 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                   pathname === item.href
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground"

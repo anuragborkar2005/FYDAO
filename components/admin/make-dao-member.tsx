@@ -36,7 +36,7 @@ export default function MakeDaoMember() {
   return (
     <RoleGuard allowedRoles={["admin"]}>
       <div className="mx-auto max-w-lg py-10">
-        <Card className="glass relative overflow-hidden border-border bg-card/50 shadow-2xl backdrop-blur-xl">
+        <Card className="relative overflow-hidden border-border bg-card/50 shadow-2xl">
           {/* Subtle accent glow using theme primary color */}
           <div className="absolute top-0 right-0 -mt-16 -mr-16 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
 
@@ -48,11 +48,11 @@ export default function MakeDaoMember() {
                   className="h-5 w-5 text-primary"
                 />
               </div>
-              <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">
+              <span className="text-sm font-bold text-muted-foreground">
                 Governance Control
               </span>
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
+            <CardTitle className="text-2xl font-bold text-foreground">
               Authorize Member
             </CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -73,7 +73,7 @@ export default function MakeDaoMember() {
                     value={targetAddress}
                     onChange={(e) => setTargetAddress(e.target.value)}
                     placeholder="0x..."
-                    className="border-border bg-secondary/50 pl-10 font-mono focus:ring-primary/40"
+                    className="border-border bg-secondary/50 pl-10 focus:ring-primary/40"
                   />
                   <HugeiconsIcon
                     icon={BitcoinKeyIcon}
@@ -94,7 +94,7 @@ export default function MakeDaoMember() {
                     onChange={(e) => setAmount(e.target.value)}
                     className="border-border bg-secondary/50 focus:ring-primary/40"
                   />
-                  <div className="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-primary">
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2 text-sm font-bold text-primary">
                     GOV
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export default function MakeDaoMember() {
               <Button
                 type="submit"
                 disabled={isLoading || !targetAddress}
-                className="h-12 w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+                className="h-12 w-full rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -125,10 +125,6 @@ export default function MakeDaoMember() {
                   </div>
                 )}
               </Button>
-
-              <p className="text-center text-[10px] tracking-widest text-muted-foreground uppercase">
-                Requires Admin Signature • Gas fees apply
-              </p>
             </form>
           </CardContent>
         </Card>

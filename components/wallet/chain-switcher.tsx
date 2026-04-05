@@ -1,6 +1,6 @@
 "use client"
 
-import { useConnection, useSwitchChain } from "wagmi"
+import { useAccount, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { sepolia } from "viem/chains"
 import { localchain } from "@/config"
@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ChevronDown } from "@hugeicons/core-free-icons"
 
 export default function ChainSwitcher() {
-  const { chain } = useConnection()
+  const { chain } = useAccount()
   const switchChain = useSwitchChain()
 
   const chains = [sepolia, localchain]

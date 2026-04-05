@@ -25,7 +25,7 @@ export function HeroSection() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-bold text-balance sm:text-5xl lg:text-6xl">
             <span className="text-foreground">Transparent. Decentralized.</span>
             <br />
             <span className="bg-linear-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
