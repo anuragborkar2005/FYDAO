@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         votesFor: 0,
         votesAgainst: 0,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     )
 
     await Campaign.findOneAndUpdate(

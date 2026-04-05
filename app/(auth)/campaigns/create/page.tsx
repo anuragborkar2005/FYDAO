@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { useAccount, useWaitForTransactionReceipt } from "wagmi"
 
-import { Navigation } from "@/components/navigation"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -26,14 +25,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import ConnectButton from "@/components/wallet/connect-button"
 
 import { useCreateCampaign } from "@/hooks/use-create-campaign"
 import {
-  uploadFileAction,
   uploadJsonToPinataAction,
+  uploadFileAction,
 } from "@/app/actions/pinata"
-import { useConnection, usePublicClient } from "wagmi"
-import ConnectButton from "@/components/wallet/connect-button"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  AiCloudIcon,
+  CheckListIcon,
+  CloudUploadIcon,
+  File01Icon,
+  LoadingIcon,
+} from "@hugeicons/core-free-icons"
 
 const categories = [
   "Medical",
@@ -47,9 +53,9 @@ const categories = [
 
 const schema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
-  category: z.string().min(1, "Please select a category"),
-  goal: z.string().min(1, "Target amount is required"),
   description: z.string().min(20, "Description must be at least 20 characters"),
+  targetAmount: z.string().min(1, "Target amount is required"),
+  category: z.string().min(1, "Please select a category"),
 })
 
 type FormData = z.infer<typeof schema>
@@ -57,17 +63,33 @@ type Step = 1 | 2 | 3
 
 export default function CreateCampaignPage() {
   const router = useRouter()
-  const { address } = useConnection()
-  const publicClient = usePublicClient()
+  const { address } = useAccount()
   const {
     createCampaign,
     isLoading: isContractPending,
     syncToDb,
   } = useCreateCampaign()
+  const [txHash, setTxHash] = React.useState<`0x${string}` | undefined>()
+  const [submissionData, setSubmissionData] = React.useState<{
+    vars: any
+    fileCids: string[]
+    title: string
+    description: string
+    category: string
+    aiReview?: any
+  } | null>(null)
+
+  const { data: receipt, isLoading: isWaitingForReceipt } =
+    useWaitForTransactionReceipt({
+      hash: txHash,
+    })
 
   const [currentStep, setCurrentStep] = React.useState<Step>(1)
   const [documents, setDocuments] = React.useState<File[]>([])
   const [isUploading, setIsUploading] = React.useState(false)
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false)
+  const [isSyncing, setIsSyncing] = React.useState(false)
+  const [aiResult, setAiResult] = React.useState<any>(null)
 
   const {
     register,
@@ -77,12 +99,9 @@ export default function CreateCampaignPage() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { category: "" },
   })
 
   const selectedCategory = watch("category")
-
-  const onContinue = () => setCurrentStep(2)
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -98,43 +117,69 @@ export default function CreateCampaignPage() {
     try {
       setIsUploading(true)
 
-      const documentCids = await Promise.all(
+      const docUploads = await Promise.all(
         documents.map(async (file) => {
           const formData = new FormData()
           formData.append("file", file)
-          return await uploadFileAction(formData)
+          return uploadFileAction(formData, { type: "campaign-proof" })
         })
       )
 
+      const fileCids = docUploads.map((res) => res.cid)
+
       const metadata = {
-        title: data.title,
-        description: data.description,
-        targetAmount: data.goal,
-        category: data.category,
-        documents: documentCids.map((res) => res.cid),
+        ...data,
+        documentCids: fileCids,
         creator: address,
         timestamp: Date.now(),
       }
 
       const uploadResult = await uploadJsonToPinataAction(metadata)
 
-      const { hash } = await createCampaign({
-        metadataURI: uploadResult.cid,
-        targetAmount: data.goal,
-        trustScore: 92,
-      })
+      let trustScore = 75
+      let aiAnalysis = null
 
-      // 5. Wait for confirmation and Sync to DB
-      if (publicClient && hash) {
-        const receipt = await publicClient.waitForTransactionReceipt({ hash })
-        await syncToDb(
-          receipt,
-          { metadataURI: uploadResult.cid, targetAmount: data.goal },
-          hash
-        )
+      if (fileCids.length > 0) {
+        setIsAnalyzing(true)
+        try {
+          const aiResponse = await fetch("/api/ai/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              proofCid: fileCids[0],
+              context: data.description,
+            }),
+          })
+          if (aiResponse.ok) {
+            const aiData = await aiResponse.json()
+            aiAnalysis = aiData.aiResult
+            trustScore = aiAnalysis.confidence
+            setAiResult(aiAnalysis)
+          }
+        } catch (e) {
+          console.error("AI Analysis failed:", e)
+        } finally {
+          setIsAnalyzing(false)
+        }
       }
 
-      setCurrentStep(3)
+      const vars = {
+        metadataURI: uploadResult.cid,
+        targetAmount: data.targetAmount,
+        trustScore: trustScore,
+      }
+
+      const { hash } = await createCampaign(vars)
+
+      setSubmissionData({
+        vars,
+        fileCids,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        aiReview: aiAnalysis,
+      })
+      setTxHash(hash as `0x${string}`)
     } catch (error) {
       console.error("Submission failed", error)
     } finally {
@@ -142,92 +187,124 @@ export default function CreateCampaignPage() {
     }
   }
 
+  React.useEffect(() => {
+    if (receipt && txHash && submissionData && !isSyncing) {
+      const performSync = async () => {
+        setIsSyncing(true)
+        try {
+          await syncToDb(
+            receipt,
+            submissionData.vars,
+            txHash,
+            submissionData.fileCids,
+            submissionData.title,
+            submissionData.description,
+            submissionData.category,
+            submissionData.aiReview
+          )
+          setCurrentStep(3)
+        } catch (e) {
+          console.error("Sync failed", e)
+        } finally {
+          setIsSyncing(false)
+        }
+      }
+      performSync()
+    }
+  }, [receipt, txHash, submissionData, isSyncing, syncToDb])
+
   const steps = [
-    { id: 1, title: "Details", description: "Campaign info" },
-    { id: 2, title: "Documents", description: "Upload proofs" },
-    { id: 3, title: "Submit", description: "DAO review" },
+    {
+      id: 1,
+      title: "Details",
+      icon: <HugeiconsIcon icon={CheckListIcon} size={18} />,
+    },
+    {
+      id: 2,
+      title: "Proofs",
+      icon: <HugeiconsIcon icon={File01Icon} size={18} />,
+    },
+    {
+      id: 3,
+      title: "Success",
+      icon: <HugeiconsIcon icon={AiCloudIcon} size={18} />,
+    },
   ]
 
   return (
-    <div className="min-h-screen">
-      <Navigation />
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Create Campaign
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Launch your fundraising campaign in minutes
+    <div className="mx-auto max-w-3xl px-4 py-12">
+      {/* Stepper UI */}
+      <div className="mb-12 flex items-center justify-between px-8">
+        {steps.map((step, idx) => (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all ${
+                  currentStep >= step.id
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {step.icon}
+              </div>
+              <span
+                className={`text-sm font-bold ${currentStep >= step.id ? "text-primary" : "text-muted-foreground"}`}
+              >
+                {step.title}
+              </span>
+            </div>
+            {idx < steps.length - 1 && (
+              <div
+                className={`mx-4 h-0.5 flex-1 rounded-full ${currentStep > step.id ? "bg-primary" : "bg-border"}`}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {!address ? (
+        <Card className="p-12 text-center">
+          <p className="mb-6 font-medium text-muted-foreground">
+            Connect your wallet to access the DAO Factory
           </p>
-        </div>
-
-        {/* Progress Bar (Same UI) */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors ${
-                      currentStep >= step.id
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border text-muted-foreground"
-                    }`}
-                  >
-                    {currentStep > step.id ? "✓" : step.id}
-                  </div>
-                  <span className="mt-2 hidden text-xs text-muted-foreground sm:block">
-                    {step.title}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`mx-2 h-0.5 flex-1 sm:mx-4 ${currentStep > step.id ? "bg-primary" : "bg-border"}`}
+          <ConnectButton />
+        </Card>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {currentStep === 1 && (
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">
+                  Campaign Details Form
+                </CardTitle>
+                <CardDescription>
+                  Define your mission and funding targets for DAO review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Campaign Title</Label>
+                  <Input
+                    {...register("title")}
+                    placeholder="e.g., Clean Water Initiative"
+                    className="bg-secondary/50"
                   />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
+                  {errors.title && (
+                    <p className="text-xs text-destructive">
+                      {errors.title.message}
+                    </p>
+                  )}
+                </div>
 
-        {!address ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="mb-4 text-muted-foreground">
-              Please connect your wallet to start a campaign
-            </p>
-            <ConnectButton />
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Step 1: Campaign Details */}
-            {currentStep === 1 && (
-              <Card className="border-border/50 bg-card/50">
-                <CardHeader>
-                  <CardTitle>Campaign Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Campaign Title</Label>
-                    <Input
-                      id="title"
-                      {...register("title")}
-                      placeholder="Enter a compelling title"
-                    />
-                    {errors.title && (
-                      <p className="text-xs text-destructive">
-                        {errors.title.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
+                    <Label>Category</Label>
                     <Select
                       value={selectedCategory}
                       onValueChange={(val) => setValue("category", val)}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                      <SelectTrigger className="bg-secondary/50">
+                        <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((c) => (
@@ -238,150 +315,192 @@ export default function CreateCampaignPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="goal">Funding Goal (USDC)</Label>
+                    <Label>Target (USDC)</Label>
                     <Input
-                      id="goal"
+                      {...register("targetAmount")}
                       type="number"
-                      {...register("goal")}
-                      placeholder="0"
+                      className="bg-secondary/50"
                     />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Campaign Story</Label>
-                    <Textarea
-                      id="description"
-                      {...register("description")}
-                      rows={6}
-                      placeholder="Why do you need support?"
-                    />
-                    {errors.description && (
-                      <p className="text-xs text-destructive">
-                        {errors.description.message}
-                      </p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label>Description & Impact</Label>
+                  <Textarea
+                    {...register("description")}
+                    rows={5}
+                    className="bg-secondary/50"
+                  />
+                </div>
 
-                  <Button type="button" className="w-full" onClick={onContinue}>
-                    Continue
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+                <Button className="w-full" onClick={() => setCurrentStep(2)}>
+                  Continue to Proofs
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-            {currentStep === 2 && (
-              <Card className="border-border/50 bg-card/50">
-                <CardHeader>
-                  <CardTitle>Upload Documents</CardTitle>
-                  <CardDescription>
-                    Documents will be verified by AI and the DAO community.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
-                    <input
-                      type="file"
-                      id="documents"
-                      multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="documents"
-                      className="flex cursor-pointer flex-col items-center"
-                    >
-                      <svg
-                        className="h-12 w-12 text-muted-foreground"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="mt-4 text-sm font-medium">
-                        Click to upload or drag and drop
-                      </p>
-                    </label>
-                  </div>
-
-                  {documents.length > 0 && (
-                    <div className="space-y-2">
-                      {documents.map((file, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/50 p-3"
-                        >
-                          <span className="max-w-50 truncate text-sm">
-                            {file.name}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={() => removeFile(i)}
-                          >
-                            ✕
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      type="submit"
-                      disabled={
-                        documents.length === 0 ||
-                        isUploading ||
-                        isContractPending
-                      }
-                    >
-                      {isUploading
-                        ? "Uploading to IPFS..."
-                        : isContractPending
-                          ? "Signing Transaction..."
-                          : "Submit to DAO"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {currentStep === 3 && (
-              <Card className="border-border/50 bg-card/50">
-                <CardContent className="py-12 text-center">
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10">
-                    <span className="text-3xl text-green-500">✓</span>
-                  </div>
-                  <h2 className="text-2xl font-bold">Campaign Submitted!</h2>
-                  <p className="mt-2 text-muted-foreground">
-                    Your campaign is now in DAO Review. Our AI agents are
-                    currently analyzing your documents.
+          {currentStep === 2 && (
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">
+                  Verification Proofs
+                </CardTitle>
+                <CardDescription>
+                  Upload identity or necessity documents for AI Agentic
+                  Analysis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="group relative rounded-2xl border-2 border-dashed border-border bg-secondary/20 p-12 text-center transition-all hover:border-primary/50">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                  <HugeiconsIcon
+                    icon={CloudUploadIcon}
+                    className="mx-auto mb-4 h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary"
+                  />
+                  <p className="text-sm font-bold text-foreground">
+                    Click to upload files
                   </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    PDF, PNG, or JPG (Max 10MB)
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {documents.map((file, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-xl border border-border bg-secondary/50 p-3"
+                    >
+                      <span className="max-w-20 truncate text-xs">
+                        {file.name}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(i)}
+                        className="text-destructive"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-4">
                   <Button
-                    className="mt-8 w-full"
-                    onClick={() => router.push("/dashboard")}
+                    variant="outline"
+                    type="button"
+                    className="flex-1"
+                    onClick={() => setCurrentStep(1)}
                   >
-                    Go to Dashboard
+                    Back
                   </Button>
-                </CardContent>
-              </Card>
-            )}
-          </form>
-        )}
-      </main>
-      <Footer />
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={
+                      documents.length === 0 ||
+                      isUploading ||
+                      isAnalyzing ||
+                      isContractPending ||
+                      isWaitingForReceipt ||
+                      isSyncing
+                    }
+                  >
+                    {isUploading ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={LoadingIcon}
+                          className="mr-2 animate-spin"
+                          size={18}
+                        />{" "}
+                        IPFS Sync...
+                      </>
+                    ) : isAnalyzing ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={LoadingIcon}
+                          className="mr-2 animate-spin"
+                          size={18}
+                        />{" "}
+                        AI Auditing...
+                      </>
+                    ) : isContractPending ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={LoadingIcon}
+                          className="mr-2 animate-spin"
+                          size={18}
+                        />{" "}
+                        Sign Tx...
+                      </>
+                    ) : isWaitingForReceipt ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={LoadingIcon}
+                          className="mr-2 animate-spin"
+                          size={18}
+                        />{" "}
+                        Mining...
+                      </>
+                    ) : isSyncing ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={LoadingIcon}
+                          className="mr-2 animate-spin"
+                          size={18}
+                        />{" "}
+                        Finalizing...
+                      </>
+                    ) : (
+                      "Submit to DAO"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 3 && (
+            <Card className="rounded-3xl border-primary/20 bg-card/50 p-12 text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+                <HugeiconsIcon
+                  icon={AiCloudIcon}
+                  className="text-primary"
+                  size={40}
+                />
+              </div>
+              <h2 className="font-bol mb-2 text-3xl">In DAO Review</h2>
+              <p className="mb-8 text-muted-foreground">
+                Your campaign has been broadcasted. Our AI agents are currently
+                verifying your proofs against the FYDAO protocol.
+              </p>
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => router.push("/campaigns")}
+                >
+                  Browse Marketplace
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => router.push("/dashboard")}
+                >
+                  View Dashboard
+                </Button>
+              </div>
+            </Card>
+          )}
+        </form>
+      )}
     </div>
   )
 }

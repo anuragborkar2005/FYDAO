@@ -4,6 +4,9 @@ import mongoose, { Schema } from "mongoose"
 const CampaignSchema = new Schema<ICampaign>({
   onChainAddress: { type: String, required: true, unique: true, index: true },
   creator: { type: String, required: true },
+  title: String,
+  description: String,
+  category: String,
   metadataCid: { type: String, required: true },
   fileCid: { type: [String], required: true },
   status: {

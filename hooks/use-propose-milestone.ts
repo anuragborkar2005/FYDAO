@@ -3,7 +3,7 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
@@ -22,7 +22,7 @@ interface ProposeMilestoneArgs {
 }
 
 export function useProposeMilestone(campaignAddress: `0x${string}`) {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
   const { writeContractAsync } = useWriteContract()
 
@@ -85,6 +85,8 @@ export function useProposeMilestone(campaignAddress: `0x${string}`) {
         args: [milestoneId],
       })
 
+      const description = `Release Milestone ${milestoneId} for Campaign ${campaignAddress}: ${amount} USDC. Proof: ${proofCid}`
+
       const tx2Hash = await writeContractAsync({
         address: CONTRACT_ADDRESSES.DAOGovernor as `0x${string}`,
         abi: ABIS.DAOGovernor,
@@ -93,11 +95,19 @@ export function useProposeMilestone(campaignAddress: `0x${string}`) {
           [campaignAddress],
           [0n],
           [releaseCalldata],
-          `Release Milestone ${milestoneId} for Campaign ${campaignAddress}: ${amount} USDC. Proof: ${proofCid}`,
+          description,
         ],
       })
 
-      return { tx2Hash, milestoneId, proofCid, amount, aiResult }
+      return {
+        tx2Hash,
+        milestoneId,
+        proofCid,
+        amount,
+        aiResult,
+        description,
+        releaseCalldata,
+      }
     },
   })
 
@@ -124,7 +134,10 @@ export function useProposeMilestone(campaignAddress: `0x${string}`) {
         }
       }
 
-      const response = await fetch("/api/campaigns/propose-milestone", {
+      if (!proposalId) throw new Error("Proposal ID not found in logs")
+
+      // 1. Sync Milestone
+      const mResp = await fetch("/api/campaigns/propose-milestone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -136,12 +149,35 @@ export function useProposeMilestone(campaignAddress: `0x${string}`) {
         }),
       })
 
-      if (!response.ok) throw new Error("Failed to sync to MongoDB")
-      return response.json()
+      if (!mResp.ok) throw new Error("Failed to sync milestone to MongoDB")
+
+      // 2. Sync Proposal
+      const pResp = await fetch("/api/governance/propose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId,
+          description: flowMutation.data?.description,
+          targets: [campaignAddress],
+          values: ["0"],
+          calldatas: [flowMutation.data?.releaseCalldata],
+          proposer: address,
+          isCampaignApproval: false,
+          campaignAddress,
+          milestoneId: Number(flowMutation.data?.milestoneId),
+        }),
+      })
+
+      if (!pResp.ok) throw new Error("Failed to sync proposal to MongoDB")
+
+      return { success: true }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["milestones", campaignAddress],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["proposals"],
       })
     },
   })

@@ -15,6 +15,7 @@ const ProposalSchema = new Schema<IProposal>({
   milestoneId: Number,
   votesFor: { type: String, default: "0" },
   votesAgainst: { type: String, default: "0" },
+  votesAbstain: { type: String, default: "0" },
   endTime: Date,
   createdAt: { type: Date, default: Date.now },
 })

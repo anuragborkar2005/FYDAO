@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
           executedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!proposal) {

@@ -3,7 +3,7 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { sepolia } from "viem/chains"
@@ -16,7 +16,7 @@ interface MakeDaoMemberArgs {
 }
 
 export function useAdminActions() {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const { isAdmin } = useUserRole()
   const queryClient = useQueryClient()
 
@@ -70,7 +70,7 @@ export function useAdminActions() {
 
       return response.json()
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["governance-token"] })
       queryClient.invalidateQueries({ queryKey: ["delegation-status"] })
       console.log("Admin action synced to database")

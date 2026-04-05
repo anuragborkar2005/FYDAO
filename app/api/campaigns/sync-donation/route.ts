@@ -28,15 +28,18 @@ export async function POST(request: NextRequest) {
         blockNumber: Number(blockNumber),
         status: "confirmed",
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     )
 
-    await Campaign.findOneAndUpdate(
-      { onChainAddress: campaignAddress.toLowerCase() },
-      {
-        $inc: { totalRaised: parseFloat(amount) },
-      }
-    )
+    const campaign = await Campaign.findOne({
+      onChainAddress: campaignAddress.toLowerCase(),
+    })
+    if (campaign) {
+      const current = parseFloat(campaign.raisedAmount || "0")
+      const newlyAdded = parseFloat(amount)
+      campaign.raisedAmount = (current + newlyAdded).toString()
+      await campaign.save()
+    }
 
     return NextResponse.json({
       success: true,

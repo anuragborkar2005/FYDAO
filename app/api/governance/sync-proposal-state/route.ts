@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import Proposal from "@/models/proposal"
 import Campaign from "@/models/campaign"
+import Milestone from "@/models/milestone"
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,23 +26,41 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
       },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     )
 
-    if (status === "executed" && updatedProposal.isCampaignApproval) {
-      const targetAddress = campaignAddress || updatedProposal.campaignAddress
+    if (status === "executed") {
+      if (updatedProposal.isCampaignApproval) {
+        const targetAddress = campaignAddress || updatedProposal.campaignAddress
 
-      if (targetAddress) {
-        await Campaign.findOneAndUpdate(
-          { onChainAddress: targetAddress.toLowerCase() },
-          {
-            $set: {
-              status: "live",
-              isLive: true,
-              approvedAt: new Date(),
+        if (targetAddress) {
+          await Campaign.findOneAndUpdate(
+            { onChainAddress: targetAddress.toLowerCase() },
+            {
+              $set: {
+                status: "live",
+                isLive: true,
+                approvedAt: new Date(),
+              },
+            }
+          )
+        }
+      } else if (updatedProposal.milestoneId !== undefined && updatedProposal.milestoneId !== null) {
+        // Handle milestone release execution
+        const targetAddress = campaignAddress || updatedProposal.campaignAddress
+        if (targetAddress) {
+          await Milestone.findOneAndUpdate(
+            {
+              campaignAddress: targetAddress.toLowerCase(),
+              milestoneId: updatedProposal.milestoneId,
             },
-          }
-        )
+            {
+              $set: {
+                status: "released",
+              },
+            }
+          )
+        }
       }
     }
 

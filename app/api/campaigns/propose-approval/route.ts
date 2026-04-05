@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         status: "pending_approval",
         approvalProposalId: proposalId,
       },
-      { new: true }
+      { returnDocument: "after" }
     )
 
     if (!campaign) {

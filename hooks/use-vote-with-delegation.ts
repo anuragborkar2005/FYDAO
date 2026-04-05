@@ -66,7 +66,7 @@ export function useVoteWithDelegation() {
   })
 
   const syncVoteMutation = useMutation({
-    mutationFn: async (receipt: any) => {
+    mutationFn: async () => {
       const { proposalId, support } = voteMutation.variables!
 
       const response = await fetch("/api/governance/sync-vote", {

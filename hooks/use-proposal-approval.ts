@@ -3,14 +3,14 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { encodeFunctionData, decodeEventLog } from "viem"
 import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
 
 export function useProposeApproval(campaignAddress: `0x${string}`) {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
   const { writeContractAsync } = useWriteContract()
 
@@ -71,13 +71,30 @@ export function useProposeApproval(campaignAddress: `0x${string}`) {
         }
       }
 
+      const description = `Approve Campaign: ${campaignAddress}`
+
       if (!proposalId)
         throw new Error("Proposal ID not found in transaction logs")
 
-      const response = await fetch("/api/campaigns/propose-approval", {
+      const response = await fetch("/api/governance/propose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignAddress, proposalId }),
+        body: JSON.stringify({
+          proposalId,
+          description,
+          targets: [campaignAddress],
+          values: ["0"],
+          calldatas: [
+            encodeFunctionData({
+              abi: ABIS.Campaign,
+              functionName: "approveAndGoLive",
+              args: [],
+            }),
+          ],
+          proposer: address,
+          isCampaignApproval: true,
+          campaignAddress,
+        }),
       })
 
       if (!response.ok) throw new Error("Failed to sync proposal to server")

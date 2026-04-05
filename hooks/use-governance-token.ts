@@ -1,11 +1,12 @@
 "use client"
 
-import { useReadContracts, useConnection, useBlockNumber } from "wagmi"
-import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
+import { useReadContracts, useAccount, useBlockNumber } from "wagmi"
+import { ABIS, CONTRACT_ADDRESSES, TOKEN_DECIMALS } from "@/contracts/config"
 import { useMemo } from "react"
+import { formatUnits } from "viem"
 
 export function useGovernanceToken() {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const { data: blockNumber } = useBlockNumber()
 
   const { data, isLoading, refetch } = useReadContracts({
@@ -56,7 +57,11 @@ export function useGovernanceToken() {
     ] = data || []
 
     const format = (val: any) =>
-      val?.result ? (Number(val.result) / 1e6).toLocaleString() : "0"
+      val?.result
+        ? Number(
+            formatUnits(val.result, TOKEN_DECIMALS.GovernanceToken)
+          ).toLocaleString()
+        : "0"
 
     const tsRaw = totalSupplyRaw?.result as bigint | undefined
     const qRaw = quorumRaw?.result as bigint | undefined

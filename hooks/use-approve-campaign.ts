@@ -3,7 +3,7 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { encodeFunctionData, decodeEventLog } from "viem"
@@ -14,7 +14,7 @@ interface ProposeArgs {
 }
 
 export function useApproveCampaign(campaignAddress: `0x${string}`) {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
 
   const { writeContractAsync } = useWriteContract()

@@ -2,9 +2,9 @@
 
 import { getIpfsUrl } from "@/utils/ipfs"
 import { useQuery } from "@tanstack/react-query"
-import { createPublicClient, formatEther, http } from "viem"
+import { createPublicClient, formatUnits, http } from "viem"
 import { sepolia } from "viem/chains"
-import { ABIS } from "@/contracts/config"
+import { ABIS, TOKEN_DECIMALS } from "@/contracts/config"
 
 const publicClient = createPublicClient({
   chain: sepolia,
@@ -53,7 +53,10 @@ export function useCampaign(campaignAddress: string) {
             abi: ABIS.MilestoneEscrow,
             functionName: "totalDeposited",
           })) as bigint
-          campaign.raisedAmount = formatEther(totalDeposited).toString()
+          campaign.raisedAmount = formatUnits(
+            totalDeposited,
+            TOKEN_DECIMALS.USDC
+          ).toString()
         }
       } catch (err) {
         console.error("Failed to sync campaign state on-chain:", err)

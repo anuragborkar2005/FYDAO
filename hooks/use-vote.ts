@@ -3,7 +3,7 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
@@ -15,7 +15,7 @@ interface VoteArgs {
 }
 
 export function useVote() {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
   const { writeContractAsync } = useWriteContract()
 

@@ -3,19 +3,18 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { parseUnits } from "viem"
-import { sepolia } from "viem/chains"
-import { ABIS } from "@/contracts/config"
+import { ABIS, TOKEN_DECIMALS } from "@/contracts/config"
 
 interface DonateArgs {
   amount: string
 }
 
 export function useDonate(campaignAddress: `0x${string}`) {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
 
   const { writeContractAsync } = useWriteContract()
@@ -25,14 +24,13 @@ export function useDonate(campaignAddress: `0x${string}`) {
     mutationFn: async ({ amount }: DonateArgs) => {
       if (!address) throw new Error("Wallet not connected")
 
-      const scaledAmount = parseUnits(amount, 6)
+      const scaledAmount = parseUnits(amount, TOKEN_DECIMALS.USDC)
 
       const hash = await writeContractAsync({
         address: campaignAddress,
         abi: ABIS.Campaign,
         functionName: "donate",
         args: [scaledAmount],
-        chainId: sepolia.id,
       })
 
       return { hash, amount }

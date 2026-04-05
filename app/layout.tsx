@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { headers } from "next/headers"
 import "./globals.css"
 import ContextProvider from "@/context"
+import { Navigation } from "@/components/navigation"
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -41,7 +42,10 @@ export default async function RootLayout({
       <body>
         <ThemeProvider>
           <ContextProvider cookies={cookies}>
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              <Navigation />
+              {children}
+            </TooltipProvider>
           </ContextProvider>
         </ThemeProvider>
       </body>

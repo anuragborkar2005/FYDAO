@@ -1,10 +1,10 @@
 import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { decodeEventLog } from "viem"
-import { useConnection, useWriteContract } from "wagmi"
+import { useAccount, useWriteContract } from "wagmi"
 
 export function useCreateCampaign() {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const { writeContractAsync } = useWriteContract()
 
   const mutation = useMutation({
@@ -31,7 +31,16 @@ export function useCreateCampaign() {
     },
   })
 
-  const syncToDb = async (receipt: any, vars: any, hash: string) => {
+  const syncToDb = async (
+    receipt: any,
+    vars: any,
+    hash: string,
+    fileCids: string[],
+    title: string,
+    description: string,
+    category: string,
+    aiReview?: any
+  ) => {
     let campaignAddr = ""
     let escrowAddr = ""
 
@@ -48,7 +57,7 @@ export function useCreateCampaign() {
           escrowAddr = args.escrow || args[1] || ""
           break
         }
-      } catch (e) {
+      } catch {
         continue
       }
     }
@@ -58,9 +67,20 @@ export function useCreateCampaign() {
         campaignAddr.toLowerCase() || `0xPENDING_${hash.slice(2, 10)}`,
       escrowAddress: escrowAddr.toLowerCase(),
       creator: address?.toLowerCase(),
+      title,
+      description,
+      category,
       metadataCid: vars.metadataURI,
+      fileCid: fileCids,
       targetAmount: vars.targetAmount,
       factoryTxHash: hash,
+      aiReview: aiReview
+        ? {
+            reportCid: aiReview.reportCid,
+            confidence: aiReview.confidence,
+            summary: aiReview.summary,
+          }
+        : undefined,
     }
 
     const response = await fetch("/api/campaigns/create", {

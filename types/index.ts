@@ -4,6 +4,9 @@ export interface ICampaign extends Document {
   onChainAddress: string
   factoryTxHash?: string
   creator: string
+  title?: string
+  description?: string
+  category?: string
   metadataCid: string
   fileCid: string[]
   status: "created" | "pending_approval" | "live" | "rejected" | "completed"
@@ -28,6 +31,7 @@ export interface IMilestone extends Document {
   proofCid: string
   amount: string
   status: "proposed" | "voting" | "approved" | "released" | "rejected"
+
   aiAnalysis?: {
     reportCid: string
     verdict: "positive" | "negative" | "neutral"
@@ -53,12 +57,14 @@ export interface IProposal extends Document {
     | "defeated"
     | "executed"
     | "canceled"
+    | "queued"
   isCampaignApproval?: boolean
   isMilestoneRelease?: boolean
   campaignAddress?: string
   milestoneId?: number
   votesFor: string
   votesAgainst: string
+  votesAbstain: string
   endTime?: Date
   createdAt: Date
 }
@@ -68,6 +74,16 @@ export interface IUser extends Document {
   votingPower?: string
   createdAt: Date
 }
+
+export interface IVote extends Document {
+  proposalId: string
+  voter: string
+  support: number
+  weight: number
+  txHash?: string
+  createdAt: Date
+}
+
 export type UserRole = "donor" | "creator" | "dao_member" | "admin"
 
 export interface UserWithRole {

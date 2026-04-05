@@ -8,17 +8,21 @@ export async function POST(request: NextRequest) {
       onChainAddress,
       escrowAddress,
       creator,
+      title,
+      description,
+      category,
       metadataCid,
       fileCid,
       targetAmount = "0",
       factoryTxHash,
+      aiReview,
     } = await request.json()
 
     if (!onChainAddress || !creator || !metadataCid || !fileCid) {
       return NextResponse.json(
         {
           error:
-            "Missing required fields: onChainAddress, creator, metadataCid",
+            "Missing required fields: onChainAddress, creator, metadataCid, fileCid",
         },
         { status: 400 }
       )
@@ -32,10 +36,14 @@ export async function POST(request: NextRequest) {
         onChainAddress: onChainAddress.toLowerCase(),
         escrowAddress: escrowAddress?.toLowerCase(),
         creator: creator.toLowerCase(),
+        title,
+        description,
+        category,
         metadataCid,
         fileCid,
         targetAmount,
         factoryTxHash,
+        aiReview,
         status: "created",
         isLive: false,
         raisedAmount: "0",
@@ -43,7 +51,7 @@ export async function POST(request: NextRequest) {
       },
       {
         upsert: true,
-        new: true,
+        returnDocument: "after",
       }
     )
 

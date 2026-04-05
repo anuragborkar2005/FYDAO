@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useGovernanceToken } from "./use-governance-token"
 import { useMemo } from "react"
-import { useConnection } from "wagmi"
+import { useAccount } from "wagmi"
 
 const ADMIN_ADDRESSES = (
   process.env.NEXT_PUBLIC_ADMIN_ADDRESSES ||
@@ -11,7 +11,7 @@ const ADMIN_ADDRESSES = (
 ).toLowerCase()
 
 export function useUserRole() {
-  const { address, isConnected } = useConnection()
+  const { address, isConnected } = useAccount()
 
   const { votingPower, raw, isLoading: isTokensLoading } = useGovernanceToken()
 

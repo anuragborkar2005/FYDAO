@@ -3,7 +3,7 @@
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnection,
+  useAccount,
 } from "wagmi"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { keccak256, stringToHex } from "viem"
@@ -18,7 +18,7 @@ interface QueueArgs {
 }
 
 export function useQueue() {
-  const { address } = useConnection()
+  const { address } = useAccount()
   const queryClient = useQueryClient()
   const { writeContractAsync } = useWriteContract()
 

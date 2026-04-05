@@ -1,9 +1,12 @@
 export function getIpfsUrl(cid: string): string {
   if (!cid) return ""
 
-  const cleanCid = cid.replace("ipfs://", "")
+  const cleanCid = cid.replace(/^ipfs:\/\//, "")
+  const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY_URL
 
-  return `https://gateway.pinata.cloud/ipfs/${cleanCid}`
+  if (!gateway) return ""
+
+  return `https://${gateway.replace(/^https?:\/\//, "").replace(/\/ipfs\/?$/, "")}/ipfs/${cleanCid}`
 }
 
 export function getIpfsGatewayUrl(

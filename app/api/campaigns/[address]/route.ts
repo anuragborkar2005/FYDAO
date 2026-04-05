@@ -57,20 +57,31 @@ export async function GET(
               proposalId: m.proposalId,
             })
             if (proposal) {
-              const stateResult = await publicClient.readContract({
-                address: CONTRACT_ADDRESSES.DAOGovernor as `0x${string}`,
-                abi: ABIS.DAOGovernor,
-                functionName: "state",
-                args: [BigInt(m.proposalId)],
-              })
+              try {
+                const stateResult = await publicClient.readContract({
+                  address: CONTRACT_ADDRESSES.DAOGovernor as `0x${string}`,
+                  abi: ABIS.DAOGovernor,
+                  functionName: "state",
+                  args: [BigInt(m.proposalId)],
+                })
 
-              milestoneObj.daoProposal = {
-                ...proposal.toObject(),
-                status: PROPOSAL_STATES[stateResult as number].toLowerCase(),
+                milestoneObj.daoProposal = {
+                  ...proposal.toObject(),
+                  status: PROPOSAL_STATES[stateResult as number].toLowerCase(),
+                }
+              } catch {
+                console.warn(
+                  `Proposal ${m.proposalId} not found on-chain. Using DB status.`
+                )
+                milestoneObj.daoProposal = {
+                  ...proposal.toObject(),
+                  status: (proposal.status || "pending").toLowerCase(),
+                  isStale: true,
+                }
               }
             }
-          } catch (err) {
-            console.error("Failed to fetch proposal status for milestone", err)
+          } catch (dbError) {
+            console.error("Failed to fetch proposal from database", dbError)
           }
         }
         return milestoneObj
