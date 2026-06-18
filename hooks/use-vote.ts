@@ -77,7 +77,8 @@ export function useVote() {
     isMined &&
     receipt &&
     !syncMutation.isPending &&
-    !syncMutation.isSuccess
+    !syncMutation.isSuccess &&
+    !syncMutation.isError
   ) {
     syncMutation.mutate()
   }

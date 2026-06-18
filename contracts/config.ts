@@ -7,11 +7,11 @@ import MilestoneEscrow from "@/contracts/abis/MilestoneEscrow.json"
 import { Abi } from "viem"
 
 export const CONTRACT_ADDRESSES = {
-  CampaignFactory: "0xceC9DEB423b1D5Ab1fd2798ba5331845723674B0",
-  DAOGovernor: "0x442107614248A2E5c6d8FAd39860787296eC0891",
-  GovernanceToken: "0x9C432370c9A6f7B41f74e4d55B8c019A09BE834B",
-  MockUSDC: "0x931A036628AC40Fa43FDa3d65319163768cb97c7",
-  Timelock: "0xd82b8cc00E9A2C23C1C5921C1b999d0901d8CDAD",
+  CampaignFactory: "0xceBF8C35fD0D1F87F0c726295a7ad417B485a980",
+  DAOGovernor: "0x47c8f9aF1B84a2063795d958D036dF92Be3bE249",
+  GovernanceToken: "0x190b2Bf071f47000A9606281ed54fE210CC8905a",
+  MockUSDC: "0x54aEd5Cd828fc8c7b31f8285Be753074EDc7E915",
+  Timelock: "0x4Cf8E13e6a3db1663F0Eb3DE67B979bC7e3d1E0A",
 } as const
 
 export const ABIS = {

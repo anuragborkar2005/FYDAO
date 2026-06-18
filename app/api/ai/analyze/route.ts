@@ -1,7 +1,7 @@
 import { uploadJsonToPinataAction } from "@/app/actions/pinata"
 import { NextRequest, NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { getIpfsUrl } from "@/utils/ipfs"
+import { getIpfsGatewayUrl } from "@/utils/ipfs"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const fileUrl = getIpfsUrl(proofCid)
+    const fileUrl = getIpfsGatewayUrl(proofCid, "pinata")
     const fileResponse = await fetch(fileUrl)
     if (!fileResponse.ok) {
       throw new Error(
-        `Failed to fetch file from IPFS: ${fileResponse.statusText}`
+        `Failed to fetch file from IPFS: ${fileResponse.statusText} (${fileResponse.status})`
       )
     }
 
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await fileResponse.arrayBuffer()
     const base64Data = Buffer.from(arrayBuffer).toString("base64")
 
-    // Use v1 instead of v1beta to ensure model availability
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const prompt = `

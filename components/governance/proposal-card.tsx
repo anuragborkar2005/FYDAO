@@ -121,20 +121,23 @@ export default function ProposalCard({
 
             {/* Redirection Link to Proof */}
             {proofCid && (
-              <a
+              <Link
                 href={ipfsGateway}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-sm border border-border bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
               >
                 <HugeiconsIcon icon={FileAttachmentIcon} size={10} />
-                VIEW PROOF: {truncatedCid}
+                {proposal.isCampaignApproval
+                  ? "CAMPAIGN METADATA"
+                  : "MILESTONE PROOF"}
+                : {truncatedCid}
                 <HugeiconsIcon
                   icon={Link01Icon}
                   size={8}
                   className="opacity-50"
                 />
-              </a>
+              </Link>
             )}
 
             <span className="font-mono text-[10px] text-muted-foreground/40">

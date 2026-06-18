@@ -15,6 +15,9 @@ import {
 } from "@hugeicons/core-free-icons"
 import DonateSection from "./donation-section"
 import EscrowProgressBar from "../escrow/escrow-progress-bar"
+import Link from "next/link"
+import { getIpfsUrl } from "@/utils/ipfs"
+import { Badge } from "../ui/badge"
 
 interface Props {
   campaignAddress: `0x${string}`
@@ -92,7 +95,7 @@ export default function CampaignDetail({ campaignAddress }: Props) {
                   </div>
                 )}
               </div>
-              <CardTitle className="text-2xl font-bold tracking-tighter text-foreground leading-tight">
+              <CardTitle className="text-2xl leading-tight font-bold tracking-tighter text-foreground">
                 {campaign.metadata?.title || "Unnamed Initiative"}
               </CardTitle>
             </CardHeader>
@@ -102,6 +105,25 @@ export default function CampaignDetail({ campaignAddress }: Props) {
               <p className="text-sm leading-relaxed font-medium text-muted-foreground opacity-90">
                 {campaign.metadata?.description}
               </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <div>Documents : </div>
+                {campaign.fileCid.map((cid: string, idx: number) => (
+                  <Link
+                    key={idx}
+                    href={getIpfsUrl(cid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Badge
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-secondary/80"
+                    >
+                      {cid}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
 
               {campaign.aiReview && (
                 <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-6">

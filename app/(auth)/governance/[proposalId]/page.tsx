@@ -17,10 +17,13 @@ import {
   Blockchain02Icon,
   Cancel02Icon,
   CircleIcon,
+  FileAttachmentIcon,
   InformationCircleIcon,
+  Link01Icon,
   LoadingIcon,
   Tick01Icon,
 } from "@hugeicons/core-free-icons"
+import { getIpfsUrl } from "@/utils/ipfs"
 
 export default function ProposalDetailPage() {
   const router = useRouter()
@@ -32,6 +35,12 @@ export default function ProposalDetailPage() {
   const proposal = useMemo(() => {
     return proposals.find((p: any) => p.proposalId === proposalId)
   }, [proposals, proposalId])
+
+  const proofCid = proposal?.proofCid
+  const truncatedCid = proofCid
+    ? `${proofCid.slice(0, 4)}...${proofCid.slice(-4)}`
+    : null
+  const ipfsGateway = getIpfsUrl(proofCid)
 
   const handleVote = async (support: number) => {
     if (!canVote) return
@@ -106,6 +115,26 @@ export default function ProposalDetailPage() {
 
         <CardContent className="space-y-12 px-6 py-2 pt-0">
           {/* Progress / Info Section */}
+
+          {proofCid && (
+            <Link
+              href={ipfsGateway}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-fit items-center gap-1.5 rounded-sm border border-border bg-secondary/50 px-2 py-0.5 text-[10px] font-bold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <HugeiconsIcon icon={FileAttachmentIcon} size={10} />
+              {proposal.isCampaignApproval
+                ? "CAMPAIGN METADATA"
+                : "MILESTONE PROOF"}
+              : {truncatedCid}
+              <HugeiconsIcon
+                icon={Link01Icon}
+                size={8}
+                className="opacity-50"
+              />
+            </Link>
+          )}
           <div className="rounded-2xl border border-border/50 bg-secondary/20 p-6">
             <div className="mb-4 flex items-center gap-2 text-sm font-bold text-muted-foreground">
               <HugeiconsIcon icon={InformationCircleIcon} size={14} />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import Campaign from "@/models/campaign"
-import { getIpfsUrl } from "@/utils/ipfs"
+import { getIpfsGatewayUrl } from "@/utils/ipfs"
 
 export async function GET() {
   try {
@@ -14,7 +14,7 @@ export async function GET() {
         const campaignObj = c.toObject()
         if (!campaignObj.title && campaignObj.metadataCid) {
           try {
-            const res = await fetch(getIpfsUrl(campaignObj.metadataCid))
+            const res = await fetch(getIpfsGatewayUrl(campaignObj.metadataCid, "pinata"))
             if (res.ok) {
               const metadata = await res.json()
               return {

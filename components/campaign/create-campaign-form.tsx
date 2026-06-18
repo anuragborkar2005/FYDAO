@@ -409,7 +409,7 @@ export default function CreateCampaignPage() {
                       isWaitingForReceipt ||
                       isSyncing
                     }
-                    >
+                  >
                     {isUploading ? (
                       <>
                         <HugeiconsIcon
@@ -428,7 +428,8 @@ export default function CreateCampaignPage() {
                         />{" "}
                         AI Auditing...
                       </>
-                    ) : isContractPending ? (                      <>
+                    ) : isContractPending ? (
+                      <>
                         <HugeiconsIcon
                           icon={LoadingIcon}
                           className="mr-2 animate-spin"
@@ -494,11 +495,6 @@ export default function CreateCampaignPage() {
               </div>
             </Card>
           )}
-        </form>
-      )}
-    </div>
-  )
-}
         </form>
       )}
     </div>

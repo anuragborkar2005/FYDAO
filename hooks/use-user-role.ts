@@ -7,7 +7,7 @@ import { useAccount } from "wagmi"
 
 const ADMIN_ADDRESSES = (
   process.env.NEXT_PUBLIC_ADMIN_ADDRESSES ||
-  "0x3dEc9ada98b5f15779b29034311a29F7a893a590"
+  "0xD90bd4431dCD3abDd2c8958Ff4a1FCA9B1e0f0AE"
 ).toLowerCase()
 
 export function useUserRole() {

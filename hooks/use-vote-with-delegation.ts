@@ -93,9 +93,10 @@ export function useVoteWithDelegation() {
   if (
     txVote.isSuccess &&
     !syncVoteMutation.isPending &&
-    !syncVoteMutation.isSuccess
+    !syncVoteMutation.isSuccess &&
+    !syncVoteMutation.isError
   ) {
-    syncVoteMutation.mutate(txVote.data)
+    syncVoteMutation.mutate()
   }
 
   if (txDelegate.isSuccess) {

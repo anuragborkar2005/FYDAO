@@ -1,0 +1,27 @@
+services:
+  website:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        - NEXT_PUBLIC_PROJECT_ID=729329a4188052130c9f0eb6ce7d1cb4
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongo-url
+      - NEXT_PUBLIC_PROJECT_ID=729329a4188052130c9f0eb6ce7d1cb4
+      - PINATA_JWT=pinata_jwt
+      - PINATA_GATEWAY_URL=gateway-url
+      - GEMINI_API_KEY=api-key
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

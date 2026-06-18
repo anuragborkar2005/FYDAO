@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import Proposal from "@/models/proposal"
+import Campaign from "@/models/campaign"
+import Milestone from "@/models/milestone"
 import { createPublicClient, http } from "viem"
 import { sepolia } from "viem/chains"
 import { ABIS, CONTRACT_ADDRESSES } from "@/contracts/config"
@@ -63,6 +65,18 @@ export async function GET(request: NextRequest) {
       publicClient.multicall({ contracts: voteCalls }),
     ])
 
+    // Fetch related Campaign and Milestone data for enrichment
+    const campaignAddresses = proposals
+      .filter((p) => p.campaignAddress)
+      .map((p) => p.campaignAddress!.toLowerCase())
+
+    const [campaigns, milestones] = await Promise.all([
+      Campaign.find({ onChainAddress: { $in: campaignAddresses } }),
+      Milestone.find({
+        proposalId: { $in: proposals.map((p) => p.proposalId) },
+      }),
+    ])
+
     // Enrich with real-time status and votes
     const enriched = proposals.map((p, index) => {
       const statusResult = statusResults[index]
@@ -93,7 +107,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return {
+      const proposalObj = {
         ...p.toObject(),
         status: blockchainStatus.toLowerCase(),
         votes,
@@ -104,6 +118,22 @@ export async function GET(request: NextRequest) {
           p.isCampaignApproval ||
           p.description.toLowerCase().includes("approve"),
       }
+
+      const campaign = campaigns.find(
+        (c) =>
+          c.onChainAddress?.toLowerCase() === p.campaignAddress?.toLowerCase()
+      )
+      const milestone = milestones.find((m) => m.proposalId === p.proposalId)
+
+      if (milestone) {
+        proposalObj.proofCid = milestone.proofCid
+        proposalObj.isMilestoneRelease = true
+      } else if (campaign) {
+        proposalObj.proofCid = campaign.metadataCid
+        proposalObj.isCampaignApproval = true
+      }
+
+      return proposalObj
     })
 
     return NextResponse.json({

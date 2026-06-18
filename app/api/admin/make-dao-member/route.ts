@@ -2,7 +2,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { NextRequest, NextResponse } from "next/server"
 
 const ADMIN_ADDRESSES = [
-  "0x3dEc9ada98b5f15779b29034311a29F7a893a590".toLowerCase(),
+  "0xD90bd4431dCD3abDd2c8958Ff4a1FCA9B1e0f0AE".toLowerCase(),
 ]
 
 export async function POST(request: NextRequest) {
